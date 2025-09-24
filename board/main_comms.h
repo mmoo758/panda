@@ -28,7 +28,9 @@ static int get_health_pkt(void *dat) {
   health->heartbeat_lost_pkt = heartbeat_lost;
   health->safety_rx_checks_invalid_pkt = safety_rx_checks_invalid;
 
+  #ifndef STM32F4
   health->spi_error_count_pkt = spi_error_count;
+  #endif
 
   health->fault_status_pkt = fault_status;
   health->faults_pkt = faults;
@@ -36,6 +38,7 @@ static int get_health_pkt(void *dat) {
   health->interrupt_load_pkt = interrupt_load;
 
   health->fan_power = fan_state.power;
+  health->fan_stall_count = fan_state.total_stall_count;
 
   health->sbu1_voltage_mV = harness.sbu1_voltage_mV;
   health->sbu2_voltage_mV = harness.sbu2_voltage_mV;
@@ -242,8 +245,6 @@ int comms_control_handler(ControlPacket_t *req, uint8_t *resp) {
       // you can only set this if you are in a non car safety mode
       if (!is_car_safety_mode(current_safety_mode)) {
         alternative_experience = req->param1;
-        current_safety_param_sp = req->param2;
-        mads_set_alternative_experience(&alternative_experience);
       }
       break;
     // **** 0xe0: uart read
@@ -296,12 +297,15 @@ int comms_control_handler(ControlPacket_t *req, uint8_t *resp) {
         heartbeat_lost = false;
         heartbeat_disabled = false;
         heartbeat_engaged = (req->param1 == 1U);
-        heartbeat_engaged_mads = true; // FIXME-SP: Implement proper heartbeat check from sunnypilot
         break;
       }
     // **** 0xf6: set siren enabled
     case 0xf6:
       siren_enabled = (req->param1 != 0U);
+      break;
+    // **** 0xf7: set green led enabled
+    case 0xf7:
+      green_led_enabled = (req->param1 != 0U);
       break;
     // **** 0xf8: disable heartbeat checks
     case 0xf8:
