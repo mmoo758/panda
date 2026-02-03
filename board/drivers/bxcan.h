@@ -139,9 +139,6 @@ void can_rx(uint8_t can_number) {
   while ((CANx->RF0R & CAN_RF0R_FMP0) != 0U) {
     can_health[can_number].total_rx_cnt += 1U;
 
-    // can is live
-    pending_can_live = 1;
-
     // add to my fifo
     CANPacket_t to_push;
 
