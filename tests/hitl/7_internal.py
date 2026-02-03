@@ -4,7 +4,7 @@ import pytest
 from panda import Panda
 
 pytestmark = [
-  pytest.mark.test_panda_types(Panda.INTERNAL_DEVICES)
+  pytest.mark.test_panda_types(Panda.INTERNAL_DEVICES),
 ]
 
 @pytest.mark.timeout(2*60)
