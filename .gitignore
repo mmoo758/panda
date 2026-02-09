@@ -14,7 +14,6 @@ a.out
 dist/
 build/
 pandacan.egg-info/
-obj/
 examples/output.csv
 .DS_Store
 .vscode*
