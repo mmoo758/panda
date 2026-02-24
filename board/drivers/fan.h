@@ -33,7 +33,7 @@ void fan_tick(void) {
     // Stall detection
     bool fan_stalled = false;
     if (current_board->fan_stall_recovery) {
-      if (fan_state.target_rpm > 0U) {
+      if (fan_state.target_power > 0U) {
         if (fan_rpm_fast == 0U) {
           fan_state.stall_counter = MIN(fan_state.stall_counter + 1U, 254U);
         } else {
