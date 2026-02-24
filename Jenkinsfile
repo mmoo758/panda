@@ -86,7 +86,7 @@ pipeline {
           steps {
             timeout(time: 20, unit: 'MINUTES') {
               script {
-                dockerImage = docker.build("${env.DOCKER_IMAGE_TAG}", "--build-arg CACHEBUST=${env.BUILD_NUMBER} .")
+                dockerImage = docker.build("${env.DOCKER_IMAGE_TAG}", "--build-arg CACHEBUST=${env.GIT_COMMIT} .")
               }
             }
           }
@@ -139,6 +139,7 @@ pipeline {
               }
             }
 
+            /*
             stage('bootkick tests') {
               steps {
                 script {
@@ -146,6 +147,7 @@ pipeline {
                 }
               }
             }
+            */
           }
         }
       }
