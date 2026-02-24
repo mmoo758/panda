@@ -69,7 +69,7 @@ def get_overshoot_rpm(p, power):
     time.sleep(0.1)
 
   # tolerate 10% overshoot
-  expected_rpm = Panda.MAX_FAN_RPMs[bytes(p.get_type())] * power / 100
+  expected_rpm = MAX_RPM*2 * power / 100
   overshoot = (max_rpm / expected_rpm) - 1
 
   return overshoot, max_rpm, max_power
