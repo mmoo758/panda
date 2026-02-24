@@ -238,7 +238,7 @@ class Panda:
     logger.debug("connected")
 
     hw_type = self.get_type()
-    if hw_type not in self.SUPPORTED_DEVICES:
+    if hw_type in Panda.DEPRECATED_DEVICES:
       print("WARNING: Using deprecated HW")
 
     # disable openpilot's heartbeat checks
