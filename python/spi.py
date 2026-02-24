@@ -16,10 +16,6 @@ try:
   import spidev
 except ImportError:
   spidev = None
-try:
-  import spidev2
-except ImportError:
-  spidev2 = None
 
 # Constants
 SYNC = 0x5A
@@ -123,9 +119,6 @@ class PandaSpiHandle(BaseHandle):
     self.dev = SpiDevice()
     self.no_retry = "NO_RETRY" in os.environ
 
-if spidev2 is not None:
-      self._spi2 = spidev2.SPIBus("/dev/spidev0.0", "w+b", bits_per_word=8, speed_hz=50_000_000)
-
   # helpers
   def _calc_checksum(self, data: bytes) -> int:
     cksum = CHECKSUM_START
@@ -139,10 +132,10 @@ if spidev2 is not None:
     start = time.monotonic()
     while (timeout == 0) or ((time.monotonic() - start) < timeout_s):
       dat = spi.xfer2([tx, ] * length)
-      if dat[0] == NACK:
-        raise PandaSpiNackResponse
-      elif dat[0] == ack_val:
+      if dat[0] == ack_val:
         return bytes(dat)
+      elif dat[0] == NACK:
+        raise PandaSpiNackResponse
 
     raise PandaSpiMissingAck
 
@@ -185,52 +178,6 @@ if spidev2 is not None:
 
       return dat[3:-1]
 
-  def _transfer_spidev2(self, spi, endpoint: int, data, timeout: int, max_rx_len: int = USBPACKET_MAX_SIZE, expect_disconnect: bool = False) -> bytes:
-    max_rx_len = max(USBPACKET_MAX_SIZE, max_rx_len)
-
-    header = self.HEADER.pack(SYNC, endpoint, len(data), max_rx_len)
-
-    header_ack = bytearray(1)
-
-    # ACK + <2 bytes for response length> + data + checksum
-    data_rx = bytearray(3+max_rx_len+1)
-
-    self._spi2.submitTransferList(spidev2.SPITransferList((
-      # header
-      {'tx_buf': header + bytes([self._calc_checksum(header), ]), 'delay_usecs': 0, 'cs_change': True},
-      {'rx_buf': header_ack, 'delay_usecs': 0, 'cs_change': True},
-
-      # send data
-      {'tx_buf': bytes([*data, self._calc_checksum(data)]), 'delay_usecs': 0, 'cs_change': True},
-      {'rx_buf': data_rx, 'delay_usecs': 0, 'cs_change': True},
-    )))
-
-    if header_ack[0] != HACK:
-      raise PandaSpiMissingAck
-
-    if expect_disconnect:
-      logger.debug("- expecting disconnect, returning")
-      return b""
-    else:
-      dat = bytes(data_rx)
-      if dat[0] != DACK:
-        if dat[0] == NACK:
-          raise PandaSpiNackResponse
-
-        print("trying again")
-        dat = self._wait_for_ack(spi, DACK, timeout, 0x13, length=3 + max_rx_len)
-
-      # get response length, then response
-      response_len = struct.unpack("<H", dat[1:3])[0]
-      if response_len > max_rx_len:
-        raise PandaSpiException(f"response length greater than max ({max_rx_len} {response_len})")
-
-      dat = dat[:3 + response_len + 1]
-      if self._calc_checksum(dat) != 0:
-        raise PandaSpiBadChecksum
-
-      return dat[3:-1]
-
   def _transfer(self, endpoint: int, data, timeout: int, max_rx_len: int = 1000, expect_disconnect: bool = False) -> bytes:
     logger.debug("starting transfer: endpoint=%d, max_rx_len=%d", endpoint, max_rx_len)
     logger.debug("==============================================")
@@ -243,14 +190,24 @@ if spidev2 is not None:
       logger.debug("\ntry #%d", n)
       with self.dev.acquire() as spi:
         try:
-          fn = self._transfer_spidev
-          #fn = self._transfer_spidev2
-          return fn(spi, endpoint, data, timeout, max_rx_len, expect_disconnect)
+          return self._transfer_spidev(spi, endpoint, data, timeout, max_rx_len, expect_disconnect)
         except PandaSpiException as e:
           exc = e
           logger.debug("SPI transfer failed, retrying", exc_info=True)
           if self.no_retry:
             break
+
+          # ensure slave is in a consistent state and ready for the next transfer
+          # (e.g. slave TX buffer isn't stuck full)
+          nack_cnt = 0
+          attempts = 5
+          while (nack_cnt <= 3) and (attempts > 0):
+            attempts -= 1
+            try:
+              self._wait_for_ack(spi, NACK, MIN_ACK_TIMEOUT_MS, 0x11, length=XFER_SIZE//2)
+              nack_cnt += 1
+            except PandaSpiException:
+              nack_cnt = 0
 
     raise exc
 
@@ -320,6 +277,9 @@ class STBootloaderSPIHandle(BaseSTBootloaderHandle):
   """
     Implementation of the STM32 SPI bootloader protocol described in:
     https://www.st.com/resource/en/application_note/an4286-spi-protocol-used-in-the-stm32-bootloader-stmicroelectronics.pdf
+
+    NOTE: the bootloader's state machine is fragile and immediately gets into a bad state when
+          sending any junk, e.g. when using the panda SPI protocol.
   """
 
   SYNC = 0x5A
