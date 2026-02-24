@@ -3,8 +3,6 @@
 struct fan_state_t fan_state;
 
 static const uint8_t FAN_TICK_FREQ = 8U;
-static const uint8_t FAN_STALL_THRESHOLD_MIN = 3U;
-
 
 void fan_set_power(uint8_t percentage) {
   if (percentage > 0U) {
@@ -15,7 +13,6 @@ void fan_set_power(uint8_t percentage) {
 }
 
 void fan_init(void) {
-  fan_state.stall_threshold = FAN_STALL_THRESHOLD_MIN;
   fan_state.cooldown_counter = current_board->fan_enable_cooldown_time * FAN_TICK_FREQ;
   llfan_init();
 }
@@ -23,43 +20,15 @@ void fan_init(void) {
 // Call this at FAN_TICK_FREQ
 void fan_tick(void) {
   if (current_board->has_fan) {
-  const uint8_t FAN_STALL_THRESHOLD_MAX = 8U;
-
     // Measure fan RPM
     uint16_t fan_rpm_fast = fan_state.tach_counter * (60U * FAN_TICK_FREQ / 4U);   // 4 interrupts per rotation
     fan_state.tach_counter = 0U;
     fan_state.rpm = (fan_rpm_fast + (3U * fan_state.rpm)) / 4U;
 
-    // Stall detection
-    // bool fan_stalled = false;
-    if (current_board->fan_stall_recovery) {
-      if (fan_state.power > 0U) {
-        if (fan_rpm_fast == 0U) {
-          fan_state.stall_counter = MIN(fan_state.stall_counter + 1U, 254U);
-        } else {
-          fan_state.stall_counter = 0U;
-        }
-
-        if (fan_state.stall_counter > (fan_state.stall_threshold*FAN_TICK_FREQ)) {
-          fan_stalled = true;
-          fan_state.stall_counter = 0U;
-          fan_state.stall_threshold = CLAMP(fan_state.stall_threshold + 2U, FAN_STALL_THRESHOLD_MIN, FAN_STALL_THRESHOLD_MAX);
-          fan_state.total_stall_count += 1U;
-
-          // datasheet gives this range as the minimum startup duty
-          fan_state.error_integral = CLAMP(fan_state.error_integral, 20.0f, 45.0f);
-        }
-      } else {
-        fan_state.stall_counter = 0U;
-        fan_state.stall_threshold = FAN_STALL_THRESHOLD_MIN;
-      }
-    }
-
     #ifdef DEBUG_FAN
       puth(fan_state.target_rpm);
       print(" "); puth(fan_rpm_fast);
       print(" "); puth(fan_state.power);
-      print(" "); puth(fan_state.stall_counter);
       print("\n");
     #endif
 
