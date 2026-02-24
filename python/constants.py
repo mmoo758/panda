@@ -24,6 +24,7 @@ class McuConfig(NamedTuple):
     # assume bootstub is in sector 0
     return self.bootstub_address + sum(self.sector_sizes[:i])
 
+
 F4Config = McuConfig(
   "STM32F4",
   0x463,
@@ -37,6 +38,7 @@ F4Config = McuConfig(
   0x8000000,
   "bootstub.panda.bin",
 )
+
 
 H7Config = McuConfig(
   "STM32H7",

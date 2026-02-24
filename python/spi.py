@@ -131,6 +131,7 @@ class PandaSpiHandle(BaseHandle):
 
   def __init__(self) -> None:
     self.dev = SpiDevice()
+    self.no_retry = "NO_RETRY" in os.environ
 
     self._transfer_raw: Callable[[SpiDevice, int, bytes, int, int, bool], bytes] = self._transfer_spidev
 
@@ -240,6 +241,8 @@ class PandaSpiHandle(BaseHandle):
         except PandaSpiException as e:
           exc = e
           logger.debug("SPI transfer failed, retrying", exc_info=True)
+          if self.no_retry:
+            break
 
     raise exc
 
