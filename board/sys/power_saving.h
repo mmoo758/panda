@@ -69,11 +69,13 @@ static void enter_stop_mode(void) {
     current_board->enable_can_transceiver(i, false);
   }
 
-  // disable ADCs
-  ADC1->CR &= ~(ADC_CR_ADEN);
-  ADC1->CR |= ADC_CR_DEEPPWD;
-  ADC2->CR &= ~(ADC_CR_ADEN);
-  ADC2->CR |= ADC_CR_DEEPPWD;
+  // disable ADCs - disable power to save energy in stop mode
+  #ifdef STM32H7
+    ADC1->CR &= ~(ADC_CR_ADEN);
+    ADC1->CR |= ADC_CR_DEEPPWD;
+    ADC2->CR &= ~(ADC_CR_ADEN);
+    ADC2->CR |= ADC_CR_DEEPPWD;
+  #endif
 
   // disable HSI48: 48 MHz USB clock
   register_clear_bits(&(RCC->CR), RCC_CR_HSI48ON);
