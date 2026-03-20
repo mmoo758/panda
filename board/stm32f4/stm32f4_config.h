@@ -40,8 +40,8 @@
 #endif
 
 #include "board/libc.h"
-#include "board/critical.h"
-#include "board/faults.h"
+#include "board/sys/critical.h"
+#include "board/sys/faults.h"
 #include "board/utils.h"
 
 #include "board/drivers/registers.h"
