@@ -5,6 +5,8 @@
 #include "board/crc.h"
 #ifdef STM32H7
 #include "board/stm32h7/lladc_declarations.h"
+#else
+#include "board/stm32f4/lladc_declarations.h"
 #endif
 
 // ******************** bootkick ********************
