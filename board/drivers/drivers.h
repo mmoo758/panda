@@ -243,7 +243,6 @@ void spi_rx_done(void);
 void spi_tx_done(bool reset);
 
 // ******************** uart ********************
-#ifdef STM32H7
 
 // ***************************** Definitions *****************************
 #ifdef STM32H7
@@ -286,8 +285,6 @@ static void puth4(unsigned int i);
 #if defined(DEBUG_SPI) || defined(DEBUG_USB) || defined(DEBUG_COMMS)
 static void hexdump(const void *a, int l);
 #endif
-
-#endif // STM32H7
 
 // ******************** usb ********************
 
