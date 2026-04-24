@@ -46,6 +46,10 @@
 
 #include "board/drivers/registers.h"
 #include "board/drivers/interrupts.h"
+
+#ifdef BOOTSTUB
+uart_ring uart_ring_som_debug;
+#endif
 #include "board/drivers/gpio.h"
 #include "board/stm32f4/peripherals.h"
 #include "board/stm32f4/interrupt_handlers.h"
