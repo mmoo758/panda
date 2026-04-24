@@ -126,6 +126,8 @@ void process_can(uint8_t can_number);
 void can_rx(uint8_t can_number);
 bool can_init(uint8_t can_number);
 
+#endif // STM32H7
+
 // ******************** harness ********************
 
 #define HARNESS_STATUS_NC 0U
@@ -191,8 +193,6 @@ void handle_interrupt(IRQn_Type irq_type);
 // Every second
 void interrupt_timer_handler(void);
 void init_interrupts(bool check_rate_limit);
-
-#endif // STM32H7
 
 // ******************** registers ********************
 
