@@ -564,6 +564,8 @@ class Panda:
       "sbu1_voltage_mV": a[23],
       "sbu2_voltage_mV": a[24],
       "som_reset_triggered": a[25],
+      "controls_allowed_lateral": a[26],
+      "controls_allowed_longitudinal": a[27],
     }
 
   @ensure_can_health_packet_version
