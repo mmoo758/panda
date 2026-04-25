@@ -1,6 +1,4 @@
-// When changing these structs, python/__init__.py needs to be kept up to date!
 
-#define HEALTH_PACKET_VERSION 16
 struct __attribute__((packed)) health_t {
   uint32_t uptime_pkt;
   uint32_t voltage_pkt;
@@ -32,7 +30,6 @@ struct __attribute__((packed)) health_t {
   uint8_t controls_allowed_longitudinal_pkt;
 };
 
-#define CAN_HEALTH_PACKET_VERSION 5
 typedef struct __attribute__((packed)) {
   uint8_t bus_off;
   uint32_t bus_off_cnt;
