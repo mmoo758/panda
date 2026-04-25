@@ -1,5 +1,6 @@
 # python library to interface with panda
 import os
+import re
 import sys
 import time
 import usb1
@@ -40,6 +41,15 @@ def calculate_checksum(data):
   for b in data:
     res ^= b
   return res
+
+def _parse_c_struct(path, name):
+  type_to_format = {"uint8_t": "B", "uint16_t": "H", "uint32_t": "I", "float": "f"}
+  with open(path) as f:
+    lines = [l.strip() for l in f.read().split(f"struct __attribute__((packed)) {name} {{", 1)[1].split("};", 1)[0].splitlines() if l.strip()]
+  fields = [re.fullmatch(rf"({'|'.join(type_to_format)})\s+\w+;", l) for l in lines]
+  if not all(fields):
+    raise ValueError(f"unsupported {name} layout in {path}")
+  return struct.Struct("<" + "".join(type_to_format[m[1]] for m in fields))
 
 def pack_can_buffer(arr, chunk=False, fd=False):
   snds = [bytearray(), ]
@@ -136,7 +146,7 @@ class Panda:
   CAN_PACKET_VERSION = 4
   HEALTH_PACKET_VERSION = 16
   CAN_HEALTH_PACKET_VERSION = 5
-  HEALTH_STRUCT = struct.Struct("<IIIIIIIIBBBBBHBBBHfBBHBHHB")
+  HEALTH_STRUCT = _parse_c_struct(os.path.join(BASEDIR, "board/health.h"), "health_t")
   CAN_HEALTH_STRUCT = struct.Struct("<BIBBBBBBBBIIIIIIIHHBBBIIII")
 
   F4_DEVICES = [HW_TYPE_WHITE, HW_TYPE_BLACK, HW_TYPE_DOS, ]
