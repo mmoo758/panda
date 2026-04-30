@@ -113,9 +113,8 @@ static void __attribute__ ((noinline)) enable_fpu(void) {
 }
 
 // go into SILENT when heartbeat isn't received for this amount of seconds.
-// Grace is longer when openpilot is engaged (active torque commands at risk).
-#define HEARTBEAT_ENGAGED_CNT 5U
-#define HEARTBEAT_NOT_ENGAGED_CNT 2U
+#define HEARTBEAT_IGNITION_CNT_ON 5U
+#define HEARTBEAT_IGNITION_CNT_OFF 2U
 
 // called at 8Hz
 static void tick_handler(void) {
@@ -176,26 +175,9 @@ static void tick_handler(void) {
 
       const bool recent_heartbeat = heartbeat_counter == 0U;
 
-      // CAN-rate wake detection
-      static uint32_t prev_total_rx = 0U;
-      uint32_t total_rx = 0U;
-      for (uint8_t i = 0U; i < PANDA_CAN_CNT; i++) {
-        total_rx += can_health[i].total_rx_cnt;
-      }
-      uint32_t rx_per_sec = total_rx - prev_total_rx;
-      prev_total_rx = total_rx;
-      if (rx_per_sec >= 200U) {
-        wake_can_rate = true;
-        wake_can_rate_cnt = 0U;
-      } else if (wake_can_rate && (wake_can_rate_cnt > 5U)) {
-        wake_can_rate = false;
-      }
-      print("CAN fps="); puth(rx_per_sec); print("/200 timeout="); puth(wake_can_rate_cnt); print("/5"); print(wake_can_rate ? " [wake]\n" : "\n");
-
       // tick drivers at 1Hz
-      bool started = harness_check_ignition() || ignition_can || wake_can_rate;
-      bool wake_up = started || wake_on_can || wake_can_rate;
-      bootkick_tick(wake_up, recent_heartbeat);
+      bool started = harness_check_ignition() || ignition_can;
+      bootkick_tick(started, recent_heartbeat);
 
       // increase heartbeat counter and cap it at the uint32 limit
       if (heartbeat_counter < UINT32_MAX) {
@@ -233,7 +215,7 @@ static void tick_handler(void) {
 
       if (!heartbeat_disabled) {
         // if the heartbeat has been gone for a while, go to SILENT safety mode and enter power save
-        if (heartbeat_counter >= (heartbeat_engaged ? HEARTBEAT_ENGAGED_CNT : HEARTBEAT_NOT_ENGAGED_CNT)) {
+        if (heartbeat_counter >= (started ? HEARTBEAT_IGNITION_CNT_ON : HEARTBEAT_IGNITION_CNT_OFF)) {
           print("device hasn't sent a heartbeat for 0x");
           puth(heartbeat_counter);
           print(" seconds. Safety is set to SILENT mode.\n");
@@ -275,16 +257,11 @@ static void tick_handler(void) {
       if (ignition_can_cnt > 2U) {
         ignition_can = false;
       }
-      if (wake_on_can_cnt > 2U) {
-        wake_on_can = false;
-      }
 
       // on to the next one
       uptime_cnt += 1U;
       safety_mode_cnt += 1U;
       ignition_can_cnt += 1U;
-      wake_on_can_cnt += 1U;
-      wake_can_rate_cnt += 1U;
 
       // synchronous safety check
       safety_tick(&current_safety_config);
